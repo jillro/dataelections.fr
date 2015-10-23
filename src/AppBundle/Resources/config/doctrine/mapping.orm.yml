@@ -1,0 +1,383 @@
+# This file is part of the Parti de Gauche elections data project.
+#
+# The Parti de Gauche elections data project is free software: you can
+# redistribute it and/or modify it under the terms of the GNU Affero General
+# Public License as published by the Free Software Foundation, either
+# version 3 of the License, or (at your option) any later version.
+#
+# The Parti de Gauche elections data project is distributed in the hope
+# that it will be useful, but WITHOUT ANY WARRANTY; without even the
+# implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with the Parti de Gauche elections data project.
+# If not, see <http://www.gnu.org/licenses/>.
+
+AppBundle\Domain\Election\Entity\Candidat\Candidat:
+    type: entity
+    inheritanceType: SINGLE_TABLE
+    id:
+        id:
+            type: integer
+            generator:
+                strategy: AUTO
+    fields:
+        nuance:
+            type: string
+            length: 255
+
+AppBundle\Domain\Election\Entity\Echeance\Echeance:
+    type: entity
+    id:
+        id:
+            type: integer
+            generator:
+                strategy: AUTO
+    uniqueConstraints:
+        date_type:
+            columns: [ "date", "type" ]
+    fields:
+        date:
+            type: date
+        type:
+            type: integer
+        secondTour:
+            type: boolean
+
+AppBundle\Domain\Election\Entity\Election\Election:
+    type: entity
+    inheritanceType: SINGLE_TABLE
+    id:
+        id:
+            type: integer
+            generator:
+                strategy: AUTO
+    uniqueConstraints:
+        echeance_circonscription:
+            columns: [ "echeance_id", "circonscription_id" ]
+    fields:
+        sieges:
+            type: smallint
+            nullable: true
+    manyToOne:
+        echeance:
+            targetEntity: AppBundle\Domain\Election\Entity\Echeance\Echeance
+            cascade: ["persist"]
+        circonscription:
+            targetEntity: AppBundle\Domain\Territoire\Entity\Territoire\AbstractTerritoire
+            cascade: ["persist"]
+    oneToMany:
+        scores:
+            targetEntity: AppBundle\Domain\Election\Entity\Election\ScoreAssignment
+            mappedBy: election
+            cascade: ["persist"]
+        voteInfos:
+            targetEntity: AppBundle\Domain\Election\Entity\Election\VoteInfoAssignment
+            mappedBy: election
+            cascade: ["persist"]
+
+AppBundle\Domain\Election\Entity\Election\ElectionDeListe:
+    type: entity
+    oneToMany:
+        candidats:
+            targetEntity: AppBundle\Domain\Election\Entity\Candidat\ListeCandidate
+            cascade: ["persist"]
+            mappedBy: election
+
+AppBundle\Domain\Election\Entity\Election\ElectionUninominale:
+    type: entity
+    oneToMany:
+        candidats:
+            targetEntity: AppBundle\Domain\Election\Entity\Candidat\PersonneCandidate
+            cascade: ["persist"]
+            mappedBy: election
+
+AppBundle\Domain\Election\Entity\Candidat\ListeCandidate:
+    type: entity
+    fields:
+        nom:
+            type: string
+            length: 255
+    manyToOne:
+        election:
+            targetEntity: AppBundle\Domain\Election\Entity\Election\ElectionDeListe
+            inversedBy: candidats
+            cascade: ["persist"]
+
+AppBundle\Domain\Election\Entity\Candidat\PersonneCandidate:
+    type: entity
+    fields:
+        nom:
+            type: string
+            length: 255
+        prenom:
+            type: string
+            length: 255
+            nullable: true
+    manyToOne:
+        election:
+            targetEntity: AppBundle\Domain\Election\Entity\Election\ElectionUninominale
+            inversedBy: candidats
+            cascade: ["persist"]
+
+AppBundle\Domain\Election\Entity\Election\ScoreAssignment:
+    type: entity
+    id:
+        id:
+            type: integer
+            generator:
+                strategy: AUTO
+    embedded:
+        scoreVO:
+            class: AppBundle\Domain\Election\VO\Score
+    manyToOne:
+        election:
+            targetEntity: AppBundle\Domain\Election\Entity\Election\Election
+            inversedBy: scores
+        candidat:
+            targetEntity: AppBundle\Domain\Election\Entity\Candidat\Candidat
+            cascade: ["persist"]
+            joinColumn: candidat_id
+        territoire:
+            targetEntity: AppBundle\Domain\Territoire\Entity\Territoire\AbstractTerritoire
+            joinColumn: territoire_id
+    fields:
+        territoire_id:
+            type: integer
+            nullable: true
+
+AppBundle\Domain\Election\Entity\Election\VoteInfoAssignment:
+    type: entity
+    id:
+        id:
+            type: integer
+            generator:
+                strategy: AUTO
+    embedded:
+        voteInfoVO:
+            class: AppBundle\Domain\Election\VO\VoteInfo
+    manyToOne:
+        election:
+            targetEntity: AppBundle\Domain\Election\Entity\Election\Election
+            inversedBy: voteInfos
+        territoire:
+            targetEntity: AppBundle\Domain\Territoire\Entity\Territoire\AbstractTerritoire
+            joinColumn: territoire_id
+    fields:
+        territoire_id:
+            type: integer
+            nullable: true
+
+AppBundle\Domain\Election\VO\Score:
+    type: embeddable
+    fields:
+        voix:
+            type: integer
+            nullable: true
+        pourcentage:
+            type: float
+            precision: 0.01
+            nullable: true
+
+AppBundle\Domain\Election\VO\VoteInfo:
+    type: embeddable
+    fields:
+        exprimes:
+            type: integer
+            nullable: true
+        inscrits:
+            type: integer
+            nullable: true
+        votants:
+            type: integer
+            nullable: true
+
+# AppBundle\ElectionsBundle\Repository\ModificationSignature\TerritoireModificationSignature:
+#     type: entity
+#     id:
+#         territoire:
+#             associationKey: true
+#         echeance:
+#             associationKey: true
+#     fields:
+#         signature:
+#             type: string
+#     oneToOne:
+#         territoire:
+#             targetEntity: AppBundle\Domain\Territoire\Entity\Territoire\AbstractTerritoire
+#         echeance:
+#             targetEntity: AppBundle\Domain\Election\Entity\Echeance\Echeance
+
+AppBundle\Repository\CacheInfo\TerritoireTimestamp:
+    type: entity
+    id:
+        territoire:
+            associationKey: true
+    fields:
+        timestamp:
+            type: datetime
+    oneToOne:
+        territoire:
+            targetEntity: AppBundle\Domain\Territoire\Entity\Territoire\AbstractTerritoire
+
+AppBundle\Domain\Territoire\Entity\Territoire\AbstractTerritoire:
+    type: entity
+    inheritanceType: SINGLE_TABLE
+    id:
+        id:
+            type: integer
+            generator:
+                strategy: AUTO
+    fields:
+        nom:
+            type: string
+            length: 255
+            nullable: true
+
+AppBundle\Domain\Territoire\Entity\Territoire\ArrondissementCommunal:
+    type: entity
+    uniqueConstraints:
+        code_commune:
+            columns: [ "code", "territoire_id" ]
+    fields:
+        code:
+            type: string
+            length: 10
+    manyToOne:
+        commune:
+            targetEntity: AppBundle\Domain\Territoire\Entity\Territoire\Commune
+            joinColumn:
+                name: territoire_id
+            cascade: [ "persist" ]
+            inversedBy: arrondissements
+
+AppBundle\Domain\Territoire\Entity\Territoire\CirconscriptionLegislative:
+    type: entity
+    uniqueConstraints:
+        code_departement:
+            columns: [ "code", "territoire_id" ]
+    fields:
+        code:
+            type: string
+            length: 10
+    manyToOne:
+        departement:
+            targetEntity: AppBundle\Domain\Territoire\Entity\Territoire\Departement
+            joinColumn:
+                name: territoire_id
+            cascade: [ "persist" ]
+            inversedBy: circonscriptionsLegislatives
+
+AppBundle\Domain\Territoire\Entity\Territoire\CirconscriptionEuropeenne:
+    type: entity
+    uniqueConstraints:
+        code_departement:
+            columns: [ "code", "territoire_id" ]
+    fields:
+        code:
+            type: string
+            length: 10
+    manyToOne:
+        pays:
+            targetEntity: AppBundle\Domain\Territoire\Entity\Territoire\Pays
+            joinColumn:
+                name: territoire_id
+            inversedBy: circonscriptionsEuropeennes
+            cascade: [ "persist" ]
+    oneToMany:
+        regions:
+            targetEntity: AppBundle\Domain\Territoire\Entity\Territoire\Region
+            mappedBy: circonscriptionEuropeenne
+
+AppBundle\Domain\Territoire\Entity\Territoire\Commune:
+    type: entity
+    uniqueConstraints:
+        code_departement:
+            columns: [ "code", "territoire_id" ]
+    fields:
+        code:
+            type: string
+            length: 10
+    manyToOne:
+        departement:
+            targetEntity: AppBundle\Domain\Territoire\Entity\Territoire\Departement
+            joinColumn:
+                name: territoire_id
+            cascade: [ "persist" ]
+            inversedBy: communes
+    oneToMany:
+        arrondissements:
+            targetEntity: AppBundle\Domain\Territoire\Entity\Territoire\ArrondissementCommunal
+            mappedBy: commune
+            cascade: [ "remove" ]
+
+AppBundle\Domain\Territoire\Entity\Territoire\Departement:
+    type: entity
+    fields:
+        code:
+            type: string
+            length: 10
+    manyToOne:
+        region:
+            targetEntity: AppBundle\Domain\Territoire\Entity\Territoire\Region
+            inversedBy: departements
+            joinColumn:
+                name: territoire_id
+            cascade: [ "persist" ]
+    oneToMany:
+        communes:
+            targetEntity: AppBundle\Domain\Territoire\Entity\Territoire\Commune
+            mappedBy: departement
+            cascade: [ "remove" ]
+        circonscriptionsLegislatives:
+            targetEntity: AppBundle\Domain\Territoire\Entity\Territoire\CirconscriptionLegislative
+            mappedBy: departement
+            cascade: [ "remove" ]
+
+AppBundle\Domain\Territoire\Entity\Territoire\Pays:
+    type: entity
+    oneToMany:
+        regions:
+            targetEntity: AppBundle\Domain\Territoire\Entity\Territoire\Region
+            mappedBy: pays
+            cascade: [ "remove" ]
+        circonscriptionsEuropeennes:
+            targetEntity: AppBundle\Domain\Territoire\Entity\Territoire\CirconscriptionEuropeenne
+            mappedBy: pays
+            cascade: [ "remove" ]
+
+AppBundle\Domain\Territoire\Entity\Territoire\Region:
+    type: entity
+    fields:
+        code:
+            type: string
+            length: 10
+    manyToOne:
+        circonscriptionEuropeenne:
+            targetEntity: AppBundle\Domain\Territoire\Entity\Territoire\CirconscriptionEuropeenne
+            inversedBy: regions
+            joinColumn:
+                name: territoire_id
+            cascade: [ "persist" ]
+        pays:
+            targetEntity: AppBundle\Domain\Territoire\Entity\Territoire\Pays
+            inversedBy: regions
+            joinColumn:
+                name: territoire2_id
+            cascade: [ "persist" ]
+    oneToMany:
+        departements:
+            targetEntity: AppBundle\Domain\Territoire\Entity\Territoire\Departement
+            mappedBy: region
+            cascade: [ "remove" ]
+
+AppBundle\Domain\Territoire\Entity\Territoire\TerritoireComposite:
+    type: entity
+    manyToOne:
+        territoire1:
+            targetEntity: AppBundle\Domain\Territoire\Entity\Territoire\AbstractTerritoire
+            joinColumn:
+                name: territoire_id
+        territoire2:
+            targetEntity: AppBundle\Domain\Territoire\Entity\Territoire\AbstractTerritoire

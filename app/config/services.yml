@@ -1,9 +1,43 @@
+imports:
+    - { resource: sonata_admin.yml }
+
 # Learn more about services, parameters and containers at
 # http://symfony.com/doc/current/book/service_container.html
 parameters:
 #    parameter_name: value
 
 services:
+    repository.territoire.doctrine:
+        class:        "AppBundle\Repository\DoctrineTerritoireRepository"
+        arguments:    ["@doctrine"]
+    repository.territoire:
+        alias: repository.territoire.doctrine
+    repository.echeance.doctrine:
+        class:        "AppBundle\Repository\DoctrineEcheanceRepository"
+        arguments:    ["@doctrine"]
+    repository.echeance:
+        alias: repository.echeance.doctrine
+    repository.election.doctrine:
+        class:        "AppBundle\Repository\DoctrineElectionRepository"
+        arguments:    ["@doctrine"]
+    repository.election:
+        alias: repository.election.doctrine
+    repository.cache_info.doctrine:
+        class:        "AppBundle\Repository\CacheInfo\DoctrineCacheInfoRepository"
+        arguments:    ["@doctrine", "%cache_invalidate_date%"]
+    repository.cache_info:
+        alias: repository.cache_info.doctrine
+    listener.cache_info.doctrine:
+        class:        "AppBundle\Repository\CacheInfo\DoctrineCacheInfoListener"
+        arguments:    ["@service_container"]
+        tags:
+            - { name: doctrine.event_listener, event: onFlush }
+            - { name: doctrine.event_listener, event: postFlush }
+    twig.territoire_extension:
+        class:         "AppBundle\Twig\TerritoireExtension"
+        arguments:     ["@router", "@cocur_slugify"]
+        tags:
+            - { name: twig.extension }
 #    service_name:
 #        class: AppBundle\Directory\ClassName
 #        arguments: ["@another_service_name", "plain_value", "%parameter_name%"]

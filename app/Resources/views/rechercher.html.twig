@@ -1,0 +1,114 @@
+{#
+ # Copyright 2015 Guillaume Royer
+ #
+ # This file is part of DataElections.
+ #
+ # DataElections is free software: you can redistribute it and/or modify it
+ # under the terms of the GNU Affero General Public License as published by the
+ # Free Software Foundation, either version 3 of the License, or (at your
+ # option) any later version.
+ #
+ # DataElections is distributed in the hope that it will be useful, but WITHOUT
+ # ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ # FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more
+ # details.
+ #
+ # You should have received a copy of the GNU Affero General Public License
+ # along with DataElections. If not, see <http://www.gnu.org/licenses/>.
+ #}
+
+{% extends 'base.html.twig' %}
+
+{% block title %}Rechercher{% endblock %}
+
+{% block content %}
+    <div class="row">
+        <div class="col-md-6 col-md-offset-3 text-center">
+            {{ form(form) }}
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12">
+            <p>
+                {% if territoires|length < 90 %}
+                    La recherche a retourné {{ territoires|length }} résultat(s).
+                {% elseif territoires|length == 90 %}
+                    La recherche a retourné plus de 90 résultats. Il est conseillé
+                    d'affiner la recherche.
+                {% endif %}
+            </p>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-4">
+            <table class="table">
+                {% for territoire in territoires %}
+                    <tr>
+                        <td>
+                            {% if territoire|resultats_link_territoire != '' %}
+                                <a href="{{ territoire|resultats_link_territoire }}">{{ territoire|display_territoire }}</a>
+                            {% else %}
+                                {{ territoire|display_territoire }}
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% if (loop.index % 30) == 0 %}
+                        </table></div>
+                        <div class="col-md-4"><table class="table">
+                    {% endif %}
+                {% endfor %}
+            </table>
+        </div>
+    </div>
+{% endblock %}
+
+{% block javascript %}
+  <script>
+    var selectizeOptions = {
+      valueField: 'url',
+      searchField: 'nom',
+      labelField: 'nom',
+      create: function(input, callback) {
+        return {
+            nom: input,
+            url: '{{ path('rechercher') }}/' + input
+        };
+      },
+      load: function(query, callback) {
+          if (!query.length) return callback();
+          $.ajax({
+              url: '{{ path('rechercher_json') }}/' + query,
+              type: 'GET',
+              dataType: 'json',
+              error: function() {
+                  callback();
+              },
+              success: function(res) {
+                  callback(res);
+              }
+          });
+      },
+      render: {
+        option_create: function(item, escape) {
+          return '<div class="create">Rechercher "' + item.input + '"</div>';
+        }
+      },
+      maxItems: 1,
+      addPrecedence: true,
+      dropdownParent: 'body',
+      onChange: function(value) {
+        window.location.href = value;
+      }
+    };
+    $(function() {
+      var $select = $('#form_terme').selectize(selectizeOptions);
+      $select[0].selectize.clear();
+      $select[0].selectize.clearOptions();
+
+      $('#form_Rechercher').click(function() {
+        return false;
+      });
+    });
+  </script>
+{% endblock %}
+

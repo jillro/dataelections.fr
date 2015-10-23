@@ -1,0 +1,503 @@
+{#
+ # Copyright 2015 Guillaume Royer
+ #
+ # This file is part of DataElections.
+ #
+ # DataElections is free software: you can redistribute it and/or modify it
+ # under the terms of the GNU Affero General Public License as published by the
+ # Free Software Foundation, either version 3 of the License, or (at your
+ # option) any later version.
+ #
+ # DataElections is distributed in the hope that it will be useful, but WITHOUT
+ # ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ # FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more
+ # details.
+ #
+ # You should have received a copy of the GNU Affero General Public License
+ # along with DataElections. If not, see <http://www.gnu.org/licenses/>.
+ #}
+
+{% extends 'base.html.twig' %}
+
+{% macro pourcentage(valeur, total) %}{% spaceless %}
+  {{ valeur and total ? ((valeur/total) * 100)|number_format(2) ~ '%' : 'NA' }}
+{% endspaceless %}{% endmacro %}
+
+{% macro candidat(candidats) %}{% spaceless %}
+  {% for candidat in candidats %}
+    {{ candidat.nom }}
+    {% if not loop.last %}<br/>{% endif %}
+  {% endfor %}
+{% endspaceless %}{% endmacro %}
+
+{% macro diffVoix(resultats, index, nuance, ref) %}{% spaceless %}
+  {% import _self as format %}
+  {% set currentResultat = 0 %}
+  {% set prevResultat = 0 %}
+  {% for echeance in resultats|slice(index-2, 1) %}
+    {% set prevResultat = echeance[nuance].score.toVoix %}
+  {% endfor %}
+  {% for echeance in resultats|slice(index-1, 1) %}
+    {% set currentResultat = echeance[nuance].score.toVoix %}
+  {% endfor %}
+
+  {% if ref is defined and ref is not null %}
+    {% set prevResultat = ref[nuance].score.toVoix %}
+  {% endif %}
+
+  {% if prevResultat and currentResultat %}
+    {% set diff = currentResultat - prevResultat %}
+    {% set class = (diff >= 0 ? 'success' : 'danger') %}
+    /
+    <span class="text-{{class}}">
+      {{ (diff >= 0 ? '+': '') }}{{ diff|number_format(0, ',', ' ')}}
+      ({{ (diff >= 0 ? '+': '') ~ format.pourcentage(diff, prevResultat) }})
+    </span>
+  {% endif %}
+{% endspaceless %}{% endmacro %}
+
+{% macro diffPourcentage(resultats, index, nuance, ref) %}{% spaceless %}
+  {% import _self as format %}
+  {% set currentResultat = 0 %}
+  {% set prevResultat = 0 %}
+  {% for echeance in resultats|slice(index-2, 1) %}
+    {% set prevResultat = echeance.exprimes ? (echeance[nuance].score.toVoix/echeance.exprimes) * 100 : false %}
+  {% endfor %}
+  {% for echeance in resultats|slice(index-1, 1) %}
+    {% set currentResultat = echeance.exprimes ? (echeance[nuance].score.toVoix/echeance.exprimes) * 100 : false %}
+  {% endfor %}
+
+  {% if ref is defined and ref is not null %}
+    {% set prevResultat = ref.exprimes ? (ref[nuance].score.toVoix / ref.exprimes) * 100 : false %}
+  {% endif %}
+
+  {% if prevResultat and currentResultat %}
+    {% set diff = currentResultat - prevResultat %}
+    {% set class = (diff >= 0 ? 'success' : 'danger') %}
+    /
+    <span class="text-{{class}}">
+      {{ (diff >= 0 ? '+': '') }}
+      {{ diff|number_format(2, ',', ' ')}} %
+    </span>
+  {% endif %}
+{% endspaceless %}{% endmacro %}
+
+{% import _self as format %}
+
+{% block stylesheets %}
+  <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/rickshaw/1.5.1/rickshaw.css" />
+  <style>
+    .row.rickshaw_container {
+      overflow: hidden;
+    }
+    .rickshaw_chart {
+      position: relative;
+      left: 40px;
+      overflow: hidden;
+    }
+    .rickshaw_y {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 40px;
+    }
+    .rickshaw_x {
+      position: relative;
+      left: 40px;
+      height: 40px;
+    }
+    .rickshaw_legend {
+      margin-right: 0px;
+      overflow: hidden;
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+  <div class="row">
+    <div class="col-md-3">
+      <h4>Résultats - {{ territoire }}</h4>
+      <p class="text-muted">Utilisez le formulaire ci-contre pour
+        sélectionner les élections qui doivent s'afficher et le point de
+        comparaison pour les variations. Les élections municipales sont cachées
+        par défaut, les données n'étant disponibles que pour les communes de plus
+        de 1000 habitants.
+      </p>
+    </div>
+    <div class="col-md-9 hidden-print">
+      {{ form_start(form) }}
+        <div class="row">
+          {% for element in form.echeances %}
+            <div class="col-md-6">
+              {{ form_widget(element) }}
+              {{ form_label(element) }}
+            </div>
+          {% endfor %}
+          <div class="col-md-6">
+            {{ form_row(form.comparaison, { 'attr': {'class': 'form-control'} })}}
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-md-12">
+            <input type="submit" class="btn btn-primary form-control" value="Voir la sélection">
+          </div>
+        </div>
+      {{ form_end(form) }}
+    </div>
+  </div>
+  <div class="row">
+    <div clas="col-md-12">
+      <div class="table-responsive">
+        <table class="table table-condensed table-hover">
+          <tr>
+            <th></th>
+            {% for echeance, resultat in resultats %}
+              <th>
+                {{ echeance }}
+                {% if is_granted('ROLE_ADMIN') and resultat.election is not null %}
+                  <br/>
+                  {% set editpath = app.request.uri ~ '/edit/' ~ echeance|slugify %}
+                  <a class="btn btn-xs btn-default" href="{{ editpath }}">
+                    Éditer
+                  </a>
+                {% endif %}
+              </th>
+            {% endfor %}
+          </tr>
+          <tr>
+            <th>Inscrits</th>
+            {% for echeance in resultats %}
+              <td>
+                {{ echeance.inscrits|number_format(0, ',', ' ')|default('NA') }}
+              </td>
+            {% endfor %}
+          </tr>
+          <tr>
+            <th>Votants</th>
+            {% for echeance in resultats %}
+              <td>
+                {{ echeance.votants|number_format(0, ',', ' ')|default('NA') }}
+              </td>
+            {% endfor %}
+          </tr>
+          <tr>
+            <th>Votants/Inscrits</th>
+            {% for echeance in resultats %}
+              <td>
+                {{ format.pourcentage(echeance.votants, echeance.inscrits) }}
+              </td>
+            {% endfor %}
+          </tr>
+          <tr>
+            <th>Exprimés</th>
+            {% for echeance in resultats %}
+              <td>
+                {{ echeance.exprimes|number_format(0, ',', ' ')|default('NA') }}
+              </td>
+            {% endfor %}
+          </tr>
+          {% if reference is not null %}
+            {% set ref = resultats[reference] %}
+          {% else %}
+            {% set ref = null %}
+          {% endif %}
+          {% for nuance, score in (resultats|first)|slice(4) %}
+            <tr>
+              <th>
+                {{ nuance }}
+              </th>
+              {% for echeance in resultats %}
+                {% if echeance[nuance].candidats|length > 0 %}
+                  <td title="Candidat-e-s" data-content="{{ format.candidat(echeance[nuance].candidats) }}">
+                {% else %}
+                  <td>
+                {% endif %}
+                  {{ echeance[nuance].score.toVoix|number_format(0, ',', ' ')|default('NA') }}
+                  {% if (ref is null and loop.index > 1) or (ref is not null and echeance != ref) %}
+                    {{ format.diffVoix(resultats, loop.index, nuance, ref) }}
+                  {% endif %}<br/>
+                  {{ format.pourcentage(echeance[nuance].score.toVoix, echeance.exprimes) }}
+                  {% if (ref is null and loop.index > 1) or (ref is not null and echeance != ref) %}
+                    {{ format.diffPourcentage(resultats, loop.index, nuance, ref) }}
+                  {% endif %}<br/>
+                  {% if echeance[nuance].sieges %}
+                    {{ echeance[nuance].sieges }} sièges
+                  {% endif %}
+                </td>
+              {% endfor %}
+            </tr>
+          {% endfor %}
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="row rickshaw_container">
+    <div class="col-md-12">
+      <h3>% inscrits</h3>
+    </div>
+    <div class="col-md-11">
+      <div class="rickshaw_y" id="rickshaw_inscrits_y"></div>
+      <div class="rickshaw_chart" id="rickshaw_inscrits_chart"></div>
+      <div class="rickshaw_x" id="rickshaw_inscrits_x"></div>
+    </div>
+    <div class="col-md-1" class="rickshaw_legend" id="rickshaw_inscrits_legend">
+    </div>
+  </div>
+  <div class="row rickshaw_container">
+    <div class="col-md-12">
+      <h3>% suffrages exprimés</h3>
+    </div>
+    <div class="col-md-11">
+      <div class="rickshaw_y" id="rickshaw_stack_y"></div>
+      <div class="rickshaw_chart" id="rickshaw_stack_chart"></div>
+      <div class="rickshaw_x" id="rickshaw_stack_x"></div>
+    </div>
+    <div class="col-md-1" class="rickshaw_legend" id="rickshaw_stack_legend">
+    </div>
+  </div>
+  <div class="row rickshaw_container">
+    <div class="col-md-12">
+      <h3>% suffrages exprimés</h3>
+    </div>
+    <div class="col-md-11">
+      <div class="rickshaw_y" id="rickshaw_line_y"></div>
+      <div class="rickshaw_chart" id="rickshaw_line_chart"></div>
+      <div class="rickshaw_x" id="rickshaw_line_x"></div>
+    </div>
+    <div class="col-md-1" class="rickshaw_legend" id="rickshaw_line_legend">
+    </div>
+  </div>
+{% endblock %}
+
+{% block javascript %}
+  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js"></script>
+  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/rickshaw/1.5.1/rickshaw.min.js"></script>
+  <script>
+    // popover
+    $('td').popover({
+      container: 'body',
+      placement: 'top',
+      html: true,
+      trigger: 'hover'
+    });
+
+    // charts
+    var getNuanceColor = function(nuance) {
+      var map = {
+        EXG: "#750103",
+        FG: "#dd0005",
+        VEC: "#74b443",
+        SOC: "#ff00bb",
+        DVG17: "#ff424b",
+        CEN: "#fff300",
+        UMP: "#424bff",
+        DVD: "#8b88ff",
+        FN: "#02005b",
+        EXD: "#000000",
+        AUT: "#717171"
+      };
+
+      return map[nuance];
+    };
+
+    var echeances = [
+      {% for nom, echeance in resultats %}
+        '{{ nom }}'
+        {% if not loop.last %},{% endif %}
+      {% endfor %}
+    ];
+
+    // rickshaw stack exprimes
+    var graph = new Rickshaw.Graph({
+      element: document.getElementById('rickshaw_inscrits_chart'),
+      width: $('#rickshaw_inscrits_chart').parent().width() - 40,
+      height: $('#rickshaw_inscrits_chart').parent().width()/3,
+      series: [
+        {% for nuance, score in (resultats|first)|slice(4)|reverse %}
+          {
+            name: '{{ nuance }}',
+            color : getNuanceColor('{{ nuance }}'),
+            data : [
+              {% for nom, echeance in resultats %}
+                {
+                  x: {{ loop.index0 }},
+                  y: {{ echeance.inscrits ? (echeance[nuance].score.toVoix/echeance.inscrits) * 100 : 0 }}
+                }
+                {% if not loop.last %},{% endif %}
+              {% endfor %}
+            ]
+          },
+        {% endfor %}
+        {
+          name: 'Blancs/Nuls',
+          color : '#CCC',
+          data : [
+            {% for nom, echeance in resultats %}
+              {
+                x: {{ loop.index0 }},
+                y: {{ echeance.inscrits ? ((echeance.votants - echeance.exprimes)/echeance.inscrits) * 100 : 0 }}
+              }
+              {% if not loop.last %},{% endif %}
+            {% endfor %}
+          ]
+        },
+        {
+          name: 'Abstention',
+          color : '#EEE',
+          data : [
+            {% for nom, echeance in resultats %}
+              {
+                x: {{ loop.index0 }},
+                y: {{ echeance.inscrits ? ((echeance.inscrits - echeance.votants)/echeance.inscrits) * 100 : 0 }}
+              }
+              {% if not loop.last %},{% endif %}
+            {% endfor %}
+          ]
+        }
+      ]
+    });
+
+    var x_axis = new Rickshaw.Graph.Axis.X( {
+      graph: graph,
+      orientation: 'bottom',
+      element: document.getElementById('rickshaw_inscrits_x'),
+      tickFormat: function(n) {
+        var label = echeances[n];
+        if ('undefined' === typeof label) {
+          return '';
+        }
+
+        return label;
+      }
+    });
+
+    var y_axis = new Rickshaw.Graph.Axis.Y({
+      graph: graph,
+      orientation: 'left',
+      tickFormat: function(n) {
+        return n + ' %';
+      },
+      pixelsPerTick: 20,
+      element: document.getElementById('rickshaw_inscrits_y')
+    });
+
+    var legend = new Rickshaw.Graph.Legend( {
+      element: document.getElementById('rickshaw_inscrits_legend'),
+      graph: graph
+    });
+
+    graph.render();
+
+    // rickshaw stack
+    var graph = new Rickshaw.Graph({
+      element: document.getElementById('rickshaw_stack_chart'),
+      width: $('#rickshaw_stack_chart').parent().width() - 40,
+      height: $('#rickshaw_stack_chart').parent().width()/3,
+      series: [
+        {% for nuance, score in (resultats|first)|slice(4)|reverse %}
+          {
+            name: '{{ nuance }}',
+            color : getNuanceColor('{{ nuance }}'),
+            data : [
+              {% for nom, echeance in resultats %}
+                {
+                  x: {{ loop.index0 }},
+                  y: {{ echeance.exprimes ? (echeance[nuance].score.toVoix/echeance.exprimes) * 100 : 0 }}
+                }
+                {% if not loop.last %},{% endif %}
+              {% endfor %}
+            ]
+          }{% if not loop.last %},{% endif %}
+        {% endfor %}
+      ]
+    });
+
+    var x_axis = new Rickshaw.Graph.Axis.X( {
+      graph: graph,
+      orientation: 'bottom',
+      element: document.getElementById('rickshaw_stack_x'),
+      tickFormat: function(n) {
+        var label = echeances[n];
+        if ('undefined' === typeof label) {
+          return '';
+        }
+
+        return label;
+      }
+    });
+
+    var y_axis = new Rickshaw.Graph.Axis.Y({
+      graph: graph,
+      orientation: 'left',
+      tickFormat: function(n) {
+        return n + ' %';
+      },
+      pixelsPerTick: 20,
+      element: document.getElementById('rickshaw_stack_y')
+    });
+
+    var legend = new Rickshaw.Graph.Legend( {
+      element: document.getElementById('rickshaw_stack_legend'),
+      graph: graph
+    });
+
+    graph.render();
+
+    // rickshaw line
+    var graph = new Rickshaw.Graph({
+      element: document.getElementById('rickshaw_line_chart'),
+      width: $('#rickshaw_line_chart').parent().width() - 40,
+      height: $('#rickshaw_line_chart').parent().width()/3,
+      renderer: 'line',
+      series: [
+        {% for nuance, score in (resultats|first)|slice(4)|reverse %}
+          {
+            name: '{{ nuance }}',
+            color : getNuanceColor('{{ nuance }}'),
+            data : [
+              {% for nom, echeance in resultats %}
+                {
+                  x: {{ loop.index0 }},
+                  y: {{ echeance.exprimes ? (echeance[nuance].score.toVoix/echeance.exprimes) * 100 : 0 }}
+                }
+                {% if not loop.last %},{% endif %}
+              {% endfor %}
+            ]
+          }{% if not loop.last %},{% endif %}
+        {% endfor %}
+      ]
+    });
+
+    var x_axis = new Rickshaw.Graph.Axis.X( {
+      graph: graph,
+      orientation: 'bottom',
+      element: document.getElementById('rickshaw_line_x'),
+      tickFormat: function(n) {
+        var label = echeances[n];
+        if ('undefined' === typeof label) {
+          return '';
+        }
+
+        return label;
+      }
+    });
+
+    var y_axis = new Rickshaw.Graph.Axis.Y({
+      graph: graph,
+      orientation: 'left',
+      tickFormat: function(n) {
+        return n + ' %';
+      },
+      pixelsPerTick: 20,
+      element: document.getElementById('rickshaw_line_y')
+    });
+
+    var legend = new Rickshaw.Graph.Legend( {
+      element: document.getElementById('rickshaw_line_legend'),
+      graph: graph
+    });
+
+    graph.render();
+  </script>
+{% endblock %}
+

@@ -1,0 +1,276 @@
+<?php
+
+/*
+ * Copyright 2015 Guillaume Royer
+ *
+ * This file is part of DataElections.
+ *
+ * DataElections is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU Affero General Public License as published by the
+ * Free Software Foundation, either version 3 of the License, or (at your
+ * option) any later version.
+ *
+ * DataElections is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more
+ * details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with DataElections. If not, see <http://www.gnu.org/licenses/>.
+ */
+
+namespace AppBundle\Domain\Territoire\Tests\Entity\Territoire;
+
+use AppBundle\Domain\Territoire\Entity\Territoire\ArrondissementCommunal;
+use AppBundle\Domain\Territoire\Entity\Territoire\CirconscriptionEuropeenne;
+use AppBundle\Domain\Territoire\Entity\Territoire\CirconscriptionLegislative;
+use AppBundle\Domain\Territoire\Entity\Territoire\Commune;
+use AppBundle\Domain\Territoire\Entity\Territoire\Departement;
+use AppBundle\Domain\Territoire\Entity\Territoire\Region;
+use AppBundle\Domain\Territoire\Entity\Territoire\TerritoireRepositoryInterface;
+
+/**
+ * Le repository doit être vidé avant chaque test, avec une méthode setUp().
+ */
+trait TerritoireRepositoryTestTrait
+{
+    /**
+     * Le repository que l'on teste. Doit être configuré par le test qui
+     * utilise le Trait.
+     *
+     * @var TerritoireRepositoryInterface
+     */
+    private $repository;
+
+    public function testAddGetRemove()
+    {
+        $pays = $this->repository->getPays();
+        $region = new Region($pays, 82, 'Rhône-Alpes');
+        $departement = new Departement($region, 38, 'Isère');
+        $commune = new Commune($departement, 'ZE', 'Grenoble');
+        $arrondissementCommunal = new ArrondissementCommunal(
+            $commune,
+            'ZE',
+            'Test'
+        );
+        $circonscriptionLeg = new CirconscriptionLegislative($departement, 2);
+        $circonscriptionEur = new CirconscriptionEuropeenne(
+            $pays,
+            1,
+            'Sud-Ouest'
+        );
+
+        $this->repository->add($arrondissementCommunal);
+        $this->repository->add($circonscriptionLeg);
+        $this->repository->add($circonscriptionEur);
+        $this->repository->save();
+
+        // L'id peut avoir changer donc on teste juste le nom.
+        $this->assertEquals(
+            $region->getNom(),
+            $this->repository->getRegion(82)->getNom()
+        );
+        $this->assertEquals(
+            $departement->getNom(),
+            $this->repository->getDepartement(38)->getNom()
+        );
+        $this->assertEquals(
+            $commune->getNom(),
+            $this->repository->getCommune(38, 'ZE')->getNom()
+        );
+        $this->assertEquals(
+            $arrondissementCommunal->getNom(),
+            $this->repository->getArrondissementCommunal($commune, 'ZE')
+                ->getNom()
+        );
+        $this->assertEquals(
+            $circonscriptionLeg->getCode(),
+            $this->repository->getCirconscriptionLegislative(38, 2)
+                ->getCode()
+        );
+        $this->assertEquals(
+            $circonscriptionEur->getNom(),
+            $this->repository->getCirconscriptionEuropeenne(
+                'Sud-Ouest'
+            )->getNom()
+        );
+        $this->assertEquals(
+            $circonscriptionEur->getNom(),
+            $this->repository->getCirconscriptionEuropeenne(
+                1
+            )->getNom()
+        );
+        $this->assertEquals(
+            'France',
+            $this->repository->getPays()->getNom()
+        );
+
+        // On teste remove
+        $this->repository->remove($this->repository->getRegion(82));
+        $this->repository->save();
+        // Si on utilise assertNull, en cas d'échec du test, phpUnit fait un
+        // var_dump ce qui pose problème lorsqu'il y a des associations
+        // d'entités cycliques.
+        $this->assertTrue(
+            null === $this->repository->getRegion(82)
+        );
+        $this->assertTrue(
+            null === $this->repository->getDepartement(38)
+        );
+        $this->assertTrue(
+            null === $this->repository->getCommune(38, 'ZE')
+        );
+        $this->assertTrue(
+            null === $this->repository->getArrondissementCommunal($commune, 'ZE')
+        );
+    }
+
+    public function testAddFinLike()
+    {
+        $pays = $this->repository->getPays();
+        $region = new Region($pays, 82, 'Rhône-Alpes');
+        $departement = new Departement($region, 38, 'Isère');
+        $commune = new Commune($departement, 'ZE', 'Grenoble');
+        $arrondissementCommunal = new ArrondissementCommunal(
+            $commune,
+            'ZE',
+            'Test'
+        );
+        $circonscriptionLeg = new CirconscriptionLegislative($departement, 2);
+        $circonscriptionEur = new CirconscriptionEuropeenne(
+            $pays,
+            1,
+            'Sud-Ouest'
+        );
+
+        $this->repository->add($arrondissementCommunal);
+        $this->repository->add($circonscriptionLeg);
+        $this->repository->add($circonscriptionEur);
+        $this->repository->save();
+
+        $this->assertTrue(in_array(
+            $region,
+            $this->repository->findLike('Rhône-Al'), true
+        ));
+        $this->assertEquals(1, count($this->repository->findLike('Rhône-Al')));
+
+        $this->assertTrue(in_array(
+            $departement,
+            $this->repository->findLike('Isèr'), true
+        ));
+        $this->assertTrue(in_array(
+            $circonscriptionLeg,
+            $this->repository->findLike('Isèr'), true
+        ));
+        $this->assertEquals(2, count($this->repository->findLike('Isèr')));
+
+        $this->assertTrue(in_array(
+            $commune,
+            $this->repository->findLike('Gre'), true
+        ));
+        $this->assertTrue(in_array(
+            $arrondissementCommunal,
+            $this->repository->findLike('Gre'), true
+        ));
+        $this->assertEquals(2, count($this->repository->findLike('Gre')));
+
+        $this->assertTrue(in_array(
+            $circonscriptionEur,
+            $this->repository->findLike('Sud-Oue'), true
+        ));
+        $this->assertEquals(1, count($this->repository->findLike('Sud-Oue')));
+
+        $this->assertTrue(in_array(
+            $pays,
+            $this->repository->findLike('Fran'), true
+        ));
+        $this->assertEquals(1, count($this->repository->findLike('Fran')));
+
+        $this->assertEquals(6, count($this->repository->findLike('r')));
+    }
+
+    public function testDoNotViolateUniqueConstraintIfTypeDifferent()
+    {
+        $pays = $this->repository->getPays();
+        $region = new Region($pays, 38, 'Nimportequoi');
+        $departement = new Departement($region, 38, 'Isère');
+        $commune = new Commune($departement, 'ZE', 'Grenoble');
+        $arrondissementCommunal = new ArrondissementCommunal(
+            $commune,
+            'ZE',
+            'Test'
+        );
+
+        $this->repository->add($arrondissementCommunal);
+        $this->repository->save();
+
+        $departement2 = new Departement(
+            $this->repository->getRegion(38),
+            22,
+            'Nimp'
+        );
+        $commune2 = new Commune($departement2, 'ZE', 'Grenoble');
+        $this->repository->add($commune2);
+        $this->repository->save();
+
+        $arrondissementCommunal2 = new ArrondissementCommunal(
+            $this->repository->getCommune(22, 'ZE'),
+            'ZE',
+            'Test'
+        );
+        $this->repository->add($arrondissementCommunal2);
+        $this->repository->save();
+    }
+
+    // Les codes des régions, des départements et des communes doivent être
+    // uniques.
+    public function testViolateUniqueCondition()
+    {
+        $pays = $this->repository->getPays();
+        $region = new Region($pays, 82, 'Rhône-Alpes');
+        $departement = new Departement($region, 38, 'Isère');
+        $commune = new Commune($departement, 'ZE', 'Grenoble');
+        $arrondissementCommunal = new ArrondissementCommunal(
+            $commune,
+            'ZE',
+            'Test'
+        );
+
+        // On ajoute les 3 territoires dans le repository.
+        $this->repository->add($arrondissementCommunal);
+        $this->repository->save();
+
+        // On test les contraintes d'unicité une à une.
+        $this->repository->add(new Region($pays, 82, 'Rhône-Alpes'));
+        $this->setExpectedException(
+            'AppBundle\Domain\Territoire\Entity\Territoire'
+            .'\UniqueConstraintViolationException'
+        );
+        $this->repository->save();
+
+        $this->repository->add(new Departement($region, 38, 'Isère'));
+        $this->setExpectedException(
+            'AppBundle\Domain\Territoire\Entity\Territoire'
+            .'\UniqueConstraintViolationException'
+        );
+        $this->repository->save();
+
+        $this->repository->add(new Commune($departement, 'ZE', 'Grenoble'));
+        $this->setExpectedException(
+            'AppBundle\Domain\Territoire\Entity\Territoire'
+            .'\UniqueConstraintViolationException'
+        );
+        $this->repository->save();
+
+        $this->repository->add(new ArrondissementCommunal(
+            $commune,
+            'ZE',
+            'Test'
+        ));
+        $this->setExpectedException(
+            'AppBundle\Domain\Territoire\Entity\Territoire'
+            .'\UniqueConstraintViolationException'
+        );
+        $this->repository->save();
+    }
+}

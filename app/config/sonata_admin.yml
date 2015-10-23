@@ -1,0 +1,90 @@
+services:
+    sonata.admin.territoire.circonscription_europeenne:
+        class: AppBundle\Admin\Territoire\CirconscriptionEuropeenneAdmin
+        tags:
+            - { name: sonata.admin, manager_type: orm, group: "Territoires", label: "Circonscriptions européennes" }
+        arguments:
+            - ~
+            - AppBundle\Domain\Territoire\Entity\Territoire\CirconscriptionEuropeenne
+            - ~
+    sonata.admin.territoire.region:
+        class: AppBundle\Admin\Territoire\RegionAdmin
+        tags:
+            - { name: sonata.admin, manager_type: orm, group: "Territoires", label: "Régions" }
+        arguments:
+            - ~
+            - AppBundle\Domain\Territoire\Entity\Territoire\Region
+            - ~
+    sonata.admin.territoire.departement:
+        class: AppBundle\Admin\Territoire\DepartementAdmin
+        tags:
+            - { name: sonata.admin, manager_type: orm, group: "Territoires", label: "Départements" }
+        arguments:
+            - ~
+            - AppBundle\Domain\Territoire\Entity\Territoire\Departement
+            - ~
+    sonata.admin.territoire.circonscription_legislative:
+        class: AppBundle\Admin\Territoire\CirconscriptionLegislativeAdmin
+        tags:
+            - { name: sonata.admin, manager_type: orm, group: "Territoires", label: "Circonscriptions législatives" }
+        arguments:
+            - ~
+            - AppBundle\Domain\Territoire\Entity\Territoire\CirconscriptionLegislative
+            - ~
+    sonata.admin.territoire.commune:
+        class: AppBundle\Admin\Territoire\CommuneAdmin
+        tags:
+            - { name: sonata.admin, manager_type: orm, group: "Territoires", label: "Communes" }
+        arguments:
+            - ~
+            - AppBundle\Domain\Territoire\Entity\Territoire\Commune
+            - ~
+    sonata.admin.territoire.arrondissement_communal:
+        class: AppBundle\Admin\Territoire\ArrondissementCommunalAdmin
+        tags:
+            - { name: sonata.admin, manager_type: orm, group: "Territoires", label: "Arrondissements communaux" }
+        arguments:
+            - ~
+            - AppBundle\Domain\Territoire\Entity\Territoire\ArrondissementCommunal
+            - ~
+    sonata.admin.election.echeance:
+        class: AppBundle\Admin\Election\EcheanceAdmin
+        tags:
+            - { name: sonata.admin, manager_type: orm, group: "Élections", label: "Échéances" }
+        arguments:
+            - ~
+            - AppBundle\Domain\Election\Entity\Echeance\Echeance
+            - ~
+    sonata.admin.election.election_uninominale:
+        class: AppBundle\Admin\Election\ElectionUninominaleAdmin
+        tags:
+            - { name: sonata.admin, manager_type: orm, group: "Élections", label: "Élections uninominales" }
+        arguments:
+            - ~
+            - AppBundle\Domain\Election\Entity\Election\ElectionUninominale
+            - ~
+    sonata.admin.election.election_de_liste:
+        class: AppBundle\Admin\Election\ElectionDeListeAdmin
+        tags:
+            - { name: sonata.admin, manager_type: orm, group: "Élections", label: "Élections de listes" }
+        arguments:
+            - ~
+            - AppBundle\Domain\Election\Entity\Election\ElectionDeListe
+            - ~
+
+    sonata.admin.election.liste_candidate:
+        class: AppBundle\Admin\Election\ListeCandidateAdmin
+        tags:
+            - { name: sonata.admin, manager_type: orm, group: "Élections", label: "Listes candidates" }
+        arguments:
+            - ~
+            - AppBundle\Domain\Election\Entity\Candidat\ListeCandidate
+            - ~
+    sonata.admin.election.personne_candiate:
+        class: AppBundle\Admin\Election\PersonneCandidateAdmin
+        tags:
+            - { name: sonata.admin, manager_type: orm, group: "Élections", label: "Personnes candidates" }
+        arguments:
+            - ~
+            - AppBundle\Domain\Election\Entity\Candidat\PersonneCandidate
+            - ~

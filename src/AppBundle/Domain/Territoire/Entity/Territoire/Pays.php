@@ -1,0 +1,100 @@
+<?php
+
+/*
+ * Copyright 2015 Guillaume Royer
+ *
+ * This file is part of DataElections.
+ *
+ * DataElections is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU Affero General Public License as published by the
+ * Free Software Foundation, either version 3 of the License, or (at your
+ * option) any later version.
+ *
+ * DataElections is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more
+ * details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with DataElections. If not, see <http://www.gnu.org/licenses/>.
+ */
+
+namespace AppBundle\Domain\Territoire\Entity\Territoire;
+
+use Doctrine\Common\Collections\ArrayCollection;
+
+class Pays extends AbstractTerritoire
+{
+    /**
+     * Les regions du Pays.
+     *
+     * @var ArrayCollection
+     */
+    private $regions;
+
+    /**
+     * Les circonscriptions européeennes du pays.
+     *
+     * @var ArrayCollection
+     */
+    private $circonscriptionsEuropeennes;
+
+    /**
+     * Créer un nouvel objet Pays.
+     *
+     * @param string $nom Le nom du Pays.
+     */
+    public function __construct($nom = 'France')
+    {
+        $this->nom = $nom;
+        $this->regions = new ArrayCollection();
+        $this->circonscriptionsEuropeennes = new ArrayCollection();
+    }
+
+    /**
+     * @internal
+     * Pour mettre à jour les relations entre les entités.
+     *
+     * @param Region $region La région à ajouter.
+     */
+    public function addRegion(Region $region)
+    {
+        if (!$this->regions->contains($region)) {
+            $this->regions[] = $region;
+        }
+    }
+
+    /**
+     * @internal
+     * Pour mettre à jour les relations entre les entités.
+     *
+     * @param Departement $departement Le département à ajouter
+     */
+    public function addCirconscriptionEuropeenne(
+        CirconscriptionEuropeenne $circo
+    ) {
+        if (!$this->circonscriptionsEuropeennes->contains($circo)) {
+            $this->circonscriptionsEuropeennes[] = $circo;
+        }
+    }
+
+    /**
+     * Récupérer les régions du pays.
+     *
+     * @return ArrayCollection Les régions de France.
+     */
+    public function getRegions()
+    {
+        return $this->regions;
+    }
+
+    /**
+     * Récupérer les circos européennes du pays.
+     *
+     * @return ArrayCollection Les circos de France.
+     */
+    public function getCirconscriptionsEuropeennes()
+    {
+        return $this->circonscriptionsEuropeennes;
+    }
+}

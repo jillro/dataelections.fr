@@ -9,3 +9,5 @@
 /composer.phar
 /vendor/
 /web/bundles/
+/web/data.db3
+/web/data.sql

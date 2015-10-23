@@ -1,0 +1,52 @@
+<?php
+
+/*
+ * Copyright 2015 Guillaume Royer
+ *
+ * This file is part of DataElections.
+ *
+ * DataElections is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU Affero General Public License as published by the
+ * Free Software Foundation, either version 3 of the License, or (at your
+ * option) any later version.
+ *
+ * DataElections is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more
+ * details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with DataElections. If not, see <http://www.gnu.org/licenses/>.
+ */
+
+namespace AppBundle\Domain\Election\Entity\Candidat\Specification;
+
+use AppBundle\Domain\Election\Entity\Candidat\Candidat;
+
+/**
+ * This class is a filter utility to used with a Repository.
+ */
+class CandidatNuanceSpecification
+{
+    /**
+     * Les nuances que doivent avoir les candidats.
+     *
+     * @var array
+     */
+    private $nuances;
+
+    public function __construct(array $nuances)
+    {
+        $this->nuances = $nuances;
+    }
+
+    public function isSatisfiedBy(Candidat $candidat)
+    {
+        return in_array($candidat->getNuance(), $this->nuances, true);
+    }
+
+    public function getNuances()
+    {
+        return $this->nuances;
+    }
+}
