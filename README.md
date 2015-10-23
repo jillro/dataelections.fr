@@ -35,7 +35,8 @@ Pour de meilleurs performances, vous pouvez utiliser Mysql plutôt que SQLite.
 Vous devez télécharger la dernière copie de la base de données et l'importer
 dans Mysql :
 
-    $ curl https://dataelections.fr/data.sql > web/data.sql
+    $ curl https://dataelections.fr/data.sql > web/data.sql.gz
+    $ gunzip web/data.sql.gz
     $ mysql -u utilisateur -p nomdelabase < web/data.sql
 
 Pour cela éditez le fichier `app/config/parameters.yml`. Entrez `pdo_mysql`
