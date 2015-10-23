@@ -46,6 +46,6 @@ class DefaultController extends Controller
             ->getForm();
 
         // replace this example code with whatever you need
-        return $this->render('default/index.html.twig', array('form' => $form->createView()));
+        return $this->render('index.html.twig', array('form' => $form->createView()));
     }
 }
