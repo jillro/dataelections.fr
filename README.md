@@ -54,7 +54,7 @@ de production.
 # Contributions
 
 Toutes les contributions sont les bienvenues. N'hésitez pas à lire [l'article de
-blog](http://blog.guilro.com/french/2015/10/22/dataelections.html) présentant le
+blog](http://blog.guilro.com/french/2015/10/23/dataelections.html) présentant le
 projet. Vous pouvez ensuite faire des Pull Requests.
 
 Pour respecter le coding style, merci d'utiliser [php-cs-
